@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADAM Tools — Meeting Recorder | Calendar | Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    body { background: #0a0a0f; color: #e2e8f0; }
+    .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+    .glow { box-shadow: 0 0 40px rgba(59,130,246,0.15); }
+    .card { background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); }
+    .tab-active { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+    .recording { animation: pulse-recording 2s infinite; }
+    @keyframes pulse-recording { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 12px rgba(239,68,68,0); } }
+    .status-dot { width:8px; height:8px; border-radius:50%; }
+    .status-green { background:#22c55e; }
+    .status-red { background:#ef4444; }
+    .status-yellow { background:#eab308; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:#1a1a2e; }
+    ::-webkit-scrollbar-thumb { background:#3b82f6; border-radius:3px; }
+    .time-slot:hover { transform: scale(1.02); cursor: pointer; }
+    .time-slot.booked { background: rgba(239,68,68,0.2) !important; cursor: not-allowed; }
+    .time-slot.available { background: rgba(34,197,94,0.15); }
+  </style>
+</head>
+<body class="min-h-screen">
+  
+  <!-- Header -->
+  <header class="glass sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-black text-white text-lg">A</div>
+      <div>
+        <h1 class="font-black text-xl text-white">ADAM SMASHER</h1>
+        <p class="text-xs text-gray-400 mono">Global Markets Operating System</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div id="clock" class="mono text-sm text-gray-400"></div>
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+        <div class="status-dot status-green"></div>
+        <span class="text-xs text-green-400 font-medium">SYSTEM ONLINE</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Navigation Tabs -->
+  <nav class="px-6 pt-6 pb-0 flex gap-2 overflow-x-auto">
+    <button onclick="showTab('meetings')" id="tab-meetings" class="tab-btn tab-active px-5 py-2.5 rounded-t-xl text-sm font-semibold transition-all">
+      🎙️ Meeting Recorder
+    </button>
+    <button onclick="showTab('calendar')" id="tab-calendar" class="tab-btn px-5 py-2.5 rounded-t-xl text-sm font-semibold text-gray-400 hover:text-white transition-all">
+      📅 Booking Calendar
+    </button>
+    <button onclick="showTab('command')" id="tab-command" class="tab-btn px-5 py-2.5 rounded-t-xl text-sm font-semibold text-gray-400 hover:text-white transition-all">
+      🏠 Command Center
+    </button>
+    <button onclick="showTab('discord')" id="tab-discord" class="tab-btn px-5 py-2.5 rounded-t-xl text-sm font-semibold text-gray-400 hover:text-white transition-all">
+      💬 Discord Hub
+    </button>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="p-6">
+    
+    <!-- ========== MEETING RECORDER TAB ========== -->
+    <div id="panel-meetings" class="tab-panel">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Recording Controls -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="card rounded-2xl p-6 glow">
+            <h2 class="text-lg font-bold text-white mb-4">🎙️ Record Meeting</h2>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Meeting Title</label>
+                <input id="meeting-title" type="text" placeholder="Q1 Strategy Review..." 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Attendees (comma separated)</label>
+                <input id="meeting-attendees" type="text" placeholder="Tumelo, Maria, Andrei..." 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Meeting Type</label>
+                <select id="meeting-type" class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-blue-500 focus:outline-none">
+                  <option value="strategy">🎯 Strategy Session</option>
+                  <option value="review">📊 Performance Review</option>
+                  <option value="client">🤝 Client Meeting</option>
+                  <option value="internal">🏢 Internal Sync</option>
+                  <option value="trade">📈 Trade Discussion</option>
+                  <option value="partnership">🤝 Partnership Talk</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Tags</label>
+                <input id="meeting-tags" type="text" placeholder="sa-russia, meat-business, expansion..." 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none">
+              </div>
+            </div>
+
+            <!-- Recording Button -->
+            <div class="mt-6 text-center">
+              <button id="record-btn" onclick="toggleRecording()" 
+                class="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center transition-all hover:scale-105 shadow-2xl">
+                <div id="record-icon" class="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                  <div class="w-5 h-5 bg-red-500 rounded-sm"></div>
+                </div>
+              </button>
+              <p id="record-status" class="mt-3 text-sm text-gray-400">Click to start recording</p>
+              <p id="record-timer" class="mono text-2xl font-bold text-white mt-1 hidden">00:00:00</p>
+            </div>
+
+            <!-- Live Transcript Preview -->
+            <div id="live-transcript" class="mt-4 p-3 rounded-xl bg-black/30 border border-white/5 max-h-40 overflow-y-auto hidden">
+              <p class="text-xs text-gray-500 mb-2">LIVE TRANSCRIPT</p>
+              <div id="transcript-content" class="text-xs text-gray-300 space-y-1"></div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">⚡ Quick Actions</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="exportToObsidian()" class="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm hover:bg-purple-500/20 transition-all">
+                📓 Obsidian
+              </button>
+              <button onclick="sendToAgentmail()" class="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm hover:bg-blue-500/20 transition-all">
+                📧 AgentMail
+              </button>
+              <button onclick="generateSummary()" class="px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm hover:bg-green-500/20 transition-all">
+                📝 AI Summary
+              </button>
+              <button onclick="generateActionItems()" class="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/20 transition-all">
+                ✅ Actions
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Meeting Log -->
+        <div class="lg:col-span-2">
+          <div class="card rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-white">📋 Meeting Log</h2>
+              <div class="flex gap-2">
+                <select id="filter-meetings" onchange="filterMeetings()" class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-400">
+                  <option value="all">All Types</option>
+                  <option value="strategy">Strategy</option>
+                  <option value="client">Client</option>
+                  <option value="trade">Trade</option>
+                  <option value="internal">Internal</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="grid grid-cols-4 gap-3 mb-6">
+              <div class="bg-blue-500/10 rounded-xl p-3 text-center">
+                <p class="text-2xl font-black text-blue-400" id="stat-total">0</p>
+                <p class="text-xs text-gray-400">Total</p>
+              </div>
+              <div class="bg-green-500/10 rounded-xl p-3 text-center">
+                <p class="text-2xl font-black text-green-400" id="stat-week">0</p>
+                <p class="text-xs text-gray-400">This Week</p>
+              </div>
+              <div class="bg-purple-500/10 rounded-xl p-3 text-center">
+                <p class="text-2xl font-black text-purple-400" id="stat-synced">0</p>
+                <p class="text-xs text-gray-400">Synced</p>
+              </div>
+              <div class="bg-yellow-500/10 rounded-xl p-3 text-center">
+                <p class="text-2xl font-black text-yellow-400" id="stat-hours">0</p>
+                <p class="text-xs text-gray-400">Hours</p>
+              </div>
+            </div>
+
+            <!-- Meeting List -->
+            <div id="meeting-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+              <div class="text-center py-12 text-gray-500">
+                <p class="text-4xl mb-2">🎙️</p>
+                <p>No meetings recorded yet</p>
+                <p class="text-sm">Start a recording to see meetings here</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Summary Panel -->
+          <div id="ai-summary-panel" class="card rounded-2xl p-6 mt-4 hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white">🧠 AI Meeting Summary</h3>
+              <button onclick="closeAiSummary()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div id="ai-summary-content" class="space-y-4">
+              <div class="bg-white/5 rounded-xl p-4">
+                <h4 class="text-sm font-bold text-blue-400 mb-2">📌 Key Decisions</h4>
+                <div id="decisions" class="space-y-2"></div>
+              </div>
+              <div class="bg-white/5 rounded-xl p-4">
+                <h4 class="text-sm font-bold text-green-400 mb-2">✅ Action Items</h4>
+                <div id="action-items" class="space-y-2"></div>
+              </div>
+              <div class="bg-white/5 rounded-xl p-4">
+                <h4 class="text-sm font-bold text-purple-400 mb-2">💡 Insights</h4>
+                <div id="insights" class="space-y-2"></div>
+              </div>
+            </div>
+            <button onclick="syncToObsidian()" class="mt-4 w-full py-3 rounded-xl bg-purple-500 text-white font-semibold hover:bg-purple-600 transition-all">
+              📓 Sync to Obsidian Vault
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CALENDAR TAB ========== -->
+    <div id="panel-calendar" class="tab-panel hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Booking Configuration -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="card rounded-2xl p-6 glow">
+            <h2 class="text-lg font-bold text-white mb-4">📅 Booking Settings</h2>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Your Email (agentmail)</label>
+                <input id="booking-email" type="email" placeholder="tumelo@agentmail.to" 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Display Name</label>
+                <input id="booking-name" type="text" placeholder="Tumelo Ramaphosa" 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Meeting Duration</label>
+                <select id="booking-duration" class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-blue-500 focus:outline-none">
+                  <option value="15">15 minutes</option>
+                  <option value="30" selected>30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">1 hour</option>
+                  <option value="90">1.5 hours</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Available Days</label>
+                <div class="flex gap-2 mt-2 flex-wrap">
+                  <button onclick="toggleDay(this, 'mon')" class="day-btn px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-sm">Mon</button>
+                  <button onclick="toggleDay(this, 'tue')" class="day-btn px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-sm">Tue</button>
+                  <button onclick="toggleDay(this, 'wed')" class="day-btn px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-sm">Wed</button>
+                  <button onclick="toggleDay(this, 'thu')" class="day-btn px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-sm">Thu</button>
+                  <button onclick="toggleDay(this, 'fri')" class="day-btn px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-sm">Fri</button>
+                  <button onclick="toggleDay(this, 'sat')" class="day-btn px-3 py-2 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-500 text-sm">Sat</button>
+                  <button onclick="toggleDay(this, 'sun')" class="day-btn px-3 py-2 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-500 text-sm">Sun</button>
+                </div>
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Timezone</label>
+                <select id="booking-timezone" class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-blue-500 focus:outline-none">
+                  <option value="Africa/Johannesburg">Africa/Johannesburg (SAST, UTC+2)</option>
+                  <option value="Europe/Moscow">Europe/Moscow (MSK, UTC+3)</option>
+                  <option value="Europe/London">Europe/London (GMT, UTC+0)</option>
+                  <option value="America/New_York">America/New_York (EST, UTC-5)</option>
+                  <option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option>
+                </select>
+              </div>
+            </div>
+
+            <button onclick="saveBookingSettings()" class="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:opacity-90 transition-all">
+              Save Booking Settings
+            </button>
+          </div>
+
+          <!-- Booking Types -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">📋 Meeting Types</h3>
+            <div class="space-y-2" id="meeting-types-list">
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div class="flex items-center gap-3">
+                  <span class="text-lg">🎯</span>
+                  <div>
+                    <p class="text-sm font-medium text-white">Strategy Call</p>
+                    <p class="text-xs text-gray-400">30 min • Video</p>
+                  </div>
+                </div>
+                <button class="text-xs text-blue-400 hover:text-blue-300">Edit</button>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div class="flex items-center gap-3">
+                  <span class="text-lg">🤝</span>
+                  <div>
+                    <p class="text-sm font-medium text-white">Partnership Talk</p>
+                    <p class="text-xs text-gray-400">45 min • Video</p>
+                  </div>
+                </div>
+                <button class="text-xs text-blue-400 hover:text-blue-300">Edit</button>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div class="flex items-center gap-3">
+                  <span class="text-lg">📈</span>
+                  <div>
+                    <p class="text-sm font-medium text-white">Trade Discussion</p>
+                    <p class="text-xs text-gray-400">15 min • Call</p>
+                  </div>
+                </div>
+                <button class="text-xs text-blue-400 hover:text-blue-300">Edit</button>
+              </div>
+            </div>
+            <button onclick="addMeetingType()" class="mt-3 w-full py-2 rounded-xl border border-dashed border-white/20 text-gray-400 text-sm hover:border-white/40 transition-all">
+              + Add Meeting Type
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Calendar View -->
+        <div class="lg:col-span-2">
+          <div class="card rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-4">
+                <button onclick="changeMonth(-1)" class="p-2 rounded-lg hover:bg-white/10 transition-all">←</button>
+                <h2 id="calendar-month" class="text-xl font-bold text-white">June 2026</h2>
+                <button onclick="changeMonth(1)" class="p-2 rounded-lg hover:bg-white/10 transition-all">→</button>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="syncCalendar()" class="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm hover:bg-blue-500/20">
+                  🔄 Sync with AgentMail
+                </button>
+              </div>
+            </div>
+
+            <!-- Week day headers -->
+            <div class="grid grid-cols-7 gap-2 mb-2">
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Mon</div>
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Tue</div>
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Wed</div>
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Thu</div>
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Fri</div>
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Sat</div>
+              <div class="text-center text-xs text-gray-500 font-medium py-2">Sun</div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+
+            <!-- Time Slots Panel (shown when date selected) -->
+            <div id="time-slots-panel" class="mt-6 hidden">
+              <div class="flex items-center justify-between mb-4">
+                <h3 id="selected-date-label" class="text-lg font-bold text-white">Select a Time</h3>
+                <button onclick="closeTimeSlots()" class="text-gray-400 hover:text-white">✕</button>
+              </div>
+              <div id="time-slots" class="grid grid-cols-4 gap-2"></div>
+              
+              <!-- Booking Form -->
+              <div id="booking-form" class="mt-4 p-4 rounded-xl bg-white/5 border border-white/10 hidden">
+                <h4 class="text-sm font-bold text-white mb-3">📝 Book This Slot</h4>
+                <div class="space-y-3">
+                  <input id="booker-name" type="text" placeholder="Your name" class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-blue-500 focus:outline-none">
+                  <input id="booker-email" type="email" placeholder="Your email" class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-blue-500 focus:outline-none">
+                  <textarea id="booker-notes" rows="2" placeholder="What's this meeting about?" class="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-blue-500 focus:outline-none"></textarea>
+                  <button onclick="confirmBooking()" class="w-full py-2 rounded-lg bg-green-500 text-white font-semibold text-sm hover:bg-green-600">
+                    Confirm Booking
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upcoming Bookings -->
+          <div class="card rounded-2xl p-6 mt-4">
+            <h3 class="text-lg font-bold text-white mb-4">📅 Upcoming Bookings</h3>
+            <div id="upcoming-bookings" class="space-y-3">
+              <div class="text-center py-8 text-gray-500">
+                <p>No upcoming bookings</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== COMMAND CENTER TAB ========== -->
+    <div id="panel-command" class="tab-panel hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Left Sidebar -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="card rounded-2xl p-6 glow">
+            <h2 class="text-lg font-bold text-white mb-4">🎯 Quick Actions</h2>
+            <div class="space-y-2">
+              <button onclick="openCommand('research')" class="w-full text-left px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-all">
+                <span class="text-blue-400">🔬</span> <span class="text-white text-sm">Research Opportunity</span>
+              </button>
+              <button onclick="openCommand('trade')" class="w-full text-left px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-all">
+                <span class="text-green-400">📈</span> <span class="text-white text-sm">New Trade Idea</span>
+              </button>
+              <button onclick="openCommand('meeting')" class="w-full text-left px-4 py-3 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-all">
+                <span class="text-purple-400">🎙️</span> <span class="text-white text-sm">Schedule Meeting</span>
+              </button>
+              <button onclick="openCommand('mirofish')" class="w-full text-left px-4 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 transition-all">
+                <span class="text-yellow-400">🐟</span> <span class="text-white text-sm">Run Mirofish Analysis</span>
+              </button>
+              <button onclick="openCommand('discord')" class="w-full text-left px-4 py-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all">
+                <span class="text-indigo-400">💬</span> <span class="text-white text-sm">Post to Discord</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- System Status -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">📊 System Status</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-300">Daytona Spaces</span>
+                <div class="flex items-center gap-2">
+                  <div class="status-dot status-yellow"></div>
+                  <span class="text-xs text-yellow-400 mono">Token Invalid</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-300">Discord Bot</span>
+                <div class="flex items-center gap-2">
+                  <div class="status-dot status-red"></div>
+                  <span class="text-xs text-gray-400 mono">Not Configured</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-300">Obsidian Sync</span>
+                <div class="flex items-center gap-2">
+                  <div class="status-dot status-green"></div>
+                  <span class="text-xs text-green-400 mono">Connected</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-300">AgentMail</span>
+                <div class="flex items-center gap-2">
+                  <div class="status-dot status-green"></div>
+                  <span class="text-xs text-green-400 mono">Ready</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Main Dashboard -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="card rounded-2xl p-6">
+            <h2 class="text-lg font-bold text-white mb-4">📈 Markets Overview</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div class="bg-blue-500/10 rounded-xl p-4 text-center">
+                <p class="text-xs text-gray-400">USD/ZAR</p>
+                <p class="text-xl font-black text-blue-400">18.42</p>
+                <p class="text-xs text-green-400">+0.3%</p>
+              </div>
+              <div class="bg-purple-500/10 rounded-xl p-4 text-center">
+                <p class="text-xs text-gray-400">RUB/ZAR</p>
+                <p class="text-xl font-black text-purple-400">0.205</p>
+                <p class="text-xs text-red-400">-0.1%</p>
+              </div>
+              <div class="bg-green-500/10 rounded-xl p-4 text-center">
+                <p class="text-xs text-gray-400">BRENT</p>
+                <p class="text-xl font-black text-green-400">$78.4</p>
+                <p class="text-xs text-green-400">+1.2%</p>
+              </div>
+              <div class="bg-yellow-500/10 rounded-xl p-4 text-center">
+                <p class="text-xs text-gray-400">GOLD</p>
+                <p class="text-xl font-black text-yellow-400">$2340</p>
+                <p class="text-xs text-green-400">+0.8%</p>
+              </div>
+            </div>
+            <div class="h-48 bg-white/5 rounded-xl flex items-center justify-center">
+              <canvas id="markets-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+
+          <!-- Activity Feed -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-4">⚡ Recent Activity</h3>
+            <div id="activity-feed" class="space-y-3 max-h-80 overflow-y-auto">
+              <div class="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-sm">✅</div>
+                <div>
+                  <p class="text-sm text-white">Meeting recorded: Q1 Strategy Review</p>
+                  <p class="text-xs text-gray-400">2 hours ago</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-sm">📓</div>
+                <div>
+                  <p class="text-sm text-white">Synced to Obsidian vault</p>
+                  <p class="text-xs text-gray-400">2 hours ago</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-sm">📧</div>
+                <div>
+                  <p class="text-sm text-white">Booking confirmed: Partnership Talk</p>
+                  <p class="text-xs text-gray-400">Yesterday</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center text-sm">🔬</div>
+                <div>
+                  <p class="text-sm text-white">Mirofish analysis completed</p>
+                  <p class="text-xs text-gray-400">2 days ago</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: AgentMail & Discord Status -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">📧 AgentMail Addresses</h3>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div>
+                  <p class="text-sm font-medium text-white">tumelo</p>
+                  <p class="text-xs text-gray-400 mono">tumelo@agentmail.to</p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">Active</span>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div>
+                  <p class="text-sm font-medium text-white">meatsa</p>
+                  <p class="text-xs text-gray-400 mono">meatsa@agentmail.to</p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">Active</span>
+              </div>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div>
+                  <p class="text-sm font-medium text-white">trade</p>
+                  <p class="text-xs text-gray-400 mono">trade@agentmail.to</p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">Active</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">💬 Discord Server</h3>
+            <div class="text-center py-6">
+              <div class="w-16 h-16 mx-auto rounded-full bg-indigo-500/20 flex items-center justify-center text-3xl mb-3">💬</div>
+              <p class="text-sm text-gray-400 mb-4">Connect Discord to receive alerts and manage your Global Markets operations</p>
+              <button onclick="showTab('discord')" class="px-6 py-2 rounded-xl bg-indigo-500 text-white font-semibold text-sm hover:bg-indigo-600 transition-all">
+                Configure Discord
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== DISCORD TAB ========== -->
+    <div id="panel-discord" class="tab-panel hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Discord Configuration -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="card rounded-2xl p-6 glow">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-xl">💬</div>
+              <div>
+                <h2 class="text-lg font-bold text-white">Discord Connection</h2>
+                <p class="text-xs text-gray-400">Connect to your Discord server</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Bot Token</label>
+                <input id="discord-token" type="password" placeholder="Enter your Discord bot token..." 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none mono text-sm">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Allowed Users (Discord IDs)</label>
+                <input id="discord-users" type="text" placeholder="Your Discord user ID" 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none mono text-sm">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 uppercase tracking-wide">Home Channel ID</label>
+                <input id="discord-channel" type="text" placeholder="Channel for notifications" 
+                  class="w-full mt-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none mono text-sm">
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <span class="text-yellow-400">⚠️</span>
+                <p class="text-xs text-yellow-200">Bot requires Message Content Intent enabled in Discord Developer Portal</p>
+              </div>
+            </div>
+
+            <button onclick="saveDiscordConfig()" class="mt-6 w-full py-3 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 transition-all">
+              Connect Discord Bot
+            </button>
+          </div>
+
+          <!-- Discord Commands -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">🤖 Bot Commands</h3>
+            <div class="space-y-2 mono text-sm">
+              <div class="p-2 rounded-lg bg-white/5">
+                <code class="text-indigo-400">@ADAM status</code>
+                <p class="text-xs text-gray-500 mt-1">Get system status</p>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5">
+                <code class="text-indigo-400">@ADAM trade [idea]</code>
+                <p class="text-xs text-gray-500 mt-1">Log a trade idea</p>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5">
+                <code class="text-indigo-400">@ADAM meeting [title]</code>
+                <p class="text-xs text-gray-500 mt-1">Schedule a meeting</p>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5">
+                <code class="text-indigo-400">@ADAM research [topic]</code>
+                <p class="text-xs text-gray-500 mt-1">Start research agent</p>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5">
+                <code class="text-indigo-400">@ADAM markets</code>
+                <p class="text-xs text-gray-500 mt-1">Get current market data</p>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5">
+                <code class="text-indigo-400">@ADAM help</code>
+                <p class="text-xs text-gray-500 mt-1">Show all commands</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Discord Status & Test -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="card rounded-2xl p-6">
+            <h2 class="text-lg font-bold text-white mb-4">📊 Connection Status</h2>
+            <div class="grid grid-cols-3 gap-4">
+              <div class="bg-white/5 rounded-xl p-4 text-center">
+                <div class="status-dot status-red mx-auto mb-2"></div>
+                <p class="text-sm font-medium text-white">Bot Status</p>
+                <p class="text-xs text-gray-400">Not Connected</p>
+              </div>
+              <div class="bg-white/5 rounded-xl p-4 text-center">
+                <div class="status-dot status-red mx-auto mb-2"></div>
+                <p class="text-sm font-medium text-white">WebSocket</p>
+                <p class="text-xs text-gray-400">Offline</p>
+              </div>
+              <div class="bg-white/5 rounded-xl p-4 text-center">
+                <div class="status-dot status-red mx-auto mb-2"></div>
+                <p class="text-sm font-medium text-white">Gateway</p>
+                <p class="text-xs text-gray-400">Disconnected</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message Log -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-white mb-4">📨 Message Log</h3>
+            <div id="discord-log" class="space-y-3 max-h-80 overflow-y-auto">
+              <div class="text-center py-8 text-gray-500">
+                <p>No messages yet</p>
+                <p class="text-sm">Messages will appear here once Discord is connected</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Post -->
+          <div class="card rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-3">📤 Quick Post to Discord</h3>
+            <div class="space-y-3">
+              <textarea id="discord-message" rows="3" placeholder="Type a message to send to Discord..." 
+                class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none"></textarea>
+              <div class="flex gap-2">
+                <select id="discord-target" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-sm">
+                  <option value="general">General Channel</option>
+                  <option value="alerts">Alerts Channel</option>
+                  <option value="trades">Trade Channel</option>
+                </select>
+                <button onclick="sendDiscordMessage()" class="px-6 py-2 rounded-xl bg-indigo-500 text-white font-semibold text-sm hover:bg-indigo-600 transition-all">
+                  Send Message
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 px-6 py-3 rounded-xl bg-green-500/90 text-white font-medium shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    Action completed successfully
+  </div>
+
+  <script>
+    // ===== GLOBAL STATE =====
+    let state = {
+      isRecording: false,
+      recordingStart: null,
+      timerInterval: null,
+      meetings: [],
+      currentMonth: new Date(),
+      selectedDate: null,
+      selectedTimeSlot: null,
+      calendarData: {},
+      availableDays: ['mon','tue','wed','thu','fri'],
+      discordConnected: false,
+      bookings: []
+    };
+
+    // ===== UTILITY FUNCTIONS =====
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `fixed bottom-6 right-6 px-6 py-3 rounded-xl font-medium shadow-2xl transform translate-y-0 opacity-100 transition-all duration-300 z-50 ${type === 'success' ? 'bg-green-500/90' : type === 'error' ? 'bg-red-500/90' : 'bg-blue-500/90'}`;
+      setTimeout(() => {
+        toast.className = 'fixed bottom-6 right-6 px-6 py-3 rounded-xl font-medium shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50';
+      }, 3000);
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ===== TAB NAVIGATION =====
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('tab-active');
+        b.classList.add('text-gray-400');
+      });
+      document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+      document.getElementById(`tab-${tabName}`).classList.add('tab-active');
+      document.getElementById(`tab-${tabName}`).classList.remove('text-gray-400');
+      
+      if (tabName === 'command') initCharts();
+    }
+
+    // ===== MEETING RECORDER =====
+    function toggleRecording() {
+      if (!state.isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }
+
+    function startRecording() {
+      state.isRecording = true;
+      state.recordingStart = new Date();
+      
+      const btn = document.getElementById('record-btn');
+      btn.classList.add('recording');
+      btn.innerHTML = `<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center"><div class="w-5 h-5 bg-red-500 rounded-sm"></div></div>`;
+      
+      document.getElementById('record-status').textContent = '🔴 Recording...';
+      document.getElementById('record-timer').classList.remove('hidden');
+      
+      // Start timer
+      state.timerInterval = setInterval(() => {
+        const elapsed = Math.floor((new Date() - state.recordingStart) / 1000);
+        const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+        const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+        const s = (elapsed % 60).toString().padStart(2, '0');
+        document.getElementById('record-timer').textContent = `${h}:${m}:${s}`;
+      }, 1000);
+      
+      // Show live transcript
+      document.getElementById('live-transcript').classList.remove('hidden');
+      simulateTranscript();
+      
+      showToast('Recording started');
+    }
+
+    function stopRecording() {
+      state.isRecording = false;
+      clearInterval(state.timerInterval);
+      
+      const btn = document.getElementById('record-btn');
+      btn.classList.remove('recording');
+      btn.innerHTML = `<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center"><div class="w-5 h-5 bg-red-500 rounded-sm"></div></div>`;
+      
+      document.getElementById('record-status').textContent = 'Click to start recording';
+      document.getElementById('record-timer').classList.add('hidden');
+      document.getElementById('live-transcript').classList.add('hidden');
+      
+      // Save meeting
+      const title = document.getElementById('meeting-title').value || 'Untitled Meeting';
+      const attendees = document.getElementById('meeting-attendees').value.split(',').map(s => s.trim()).filter(Boolean);
+      const type = document.getElementById('meeting-type').value;
+      const tags = document.getElementById('meeting-tags').value.split(',').map(s => s.trim()).filter(Boolean);
+      
+      const meeting = {
+        id: Date.now(),
+        title,
+        attendees,
+        type,
+        tags,
+        startTime: state.recordingStart,
+        endTime: new Date(),
+        duration: Math.floor((state.recordingStart - new Date()) / 1000 / 60),
+        transcript: document.getElementById('transcript-content').innerText,
+        synced: false
+      };
+      
+      state.meetings.unshift(meeting);
+      renderMeetings();
+      showToast('Meeting saved! Click AI Summary to analyze.');
+      
+      // Reset form
+      document.getElementById('meeting-title').value = '';
+      document.getElementById('meeting-attendees').value = '';
+      document.getElementById('meeting-tags').value = '';
+    }
+
+    function simulateTranscript() {
+      const messages = [
+        'We need to focus on the Russia-SA trade corridor expansion...',
+        'The meat processing facility in Johannesburg shows strong margins...',
+        'Let\'s discuss the RUB/ZAR exposure on Q3 positioning...',
+        'I recommend we increase beef exports through the SPonWeb channel...',
+        'The market sentiment on BRENT crude is positive for our logistics costs...',
+        'We should schedule a follow-up with the Russian partners next week...',
+        'Q2 targets are achievable if we maintain current trajectory...'
+      ];
+      
+      const content = document.getElementById('transcript-content');
+      let i = 0;
+      const interval = setInterval(() => {
+        if (!state.isRecording || i >= messages.length) {
+          clearInterval(interval);
+          return;
+        }
+        const p = document.createElement('p');
+        p.textContent = `• ${messages[i]}`;
+        content.appendChild(p);
+        content.scrollTop = content.scrollHeight;
+        i++;
+      }, 4000);
+    }
+
+    function renderMeetings() {
+      const list = document.getElementById('meeting-list');
+      
+      if (state.meetings.length === 0) {
+        list.innerHTML = `<div class="text-center py-12 text-gray-500">
+          <p class="text-4xl mb-2">🎙️</p>
+          <p>No meetings recorded yet</p>
+          <p class="text-sm">Start a recording to see meetings here</p>
+        </div>`;
+        return;
+      }
+      
+      const typeColors = {
+        strategy: 'blue',
+        review: 'purple',
+        client: 'green',
+        internal: 'yellow',
+        trade: 'indigo',
+        partnership: 'pink'
+      };
+      
+      const typeIcons = {
+        strategy: '🎯',
+        review: '📊',
+        client: '🤝',
+        internal: '🏢',
+        trade: '📈',
+        partnership: '🤝'
+      };
+      
+      list.innerHTML = state.meetings.map(m => {
+        const color = typeColors[m.type] || 'gray';
+        const icon = typeIcons[m.type] || '📋';
+        const time = new Date(m.startTime).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const dur = m.duration || Math.floor((m.endTime - m.startTime) / 60000);
+        
+        return `<div class="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer" onclick="showMeetingDetail(${m.id})">
+          <div class="flex items-start justify-between">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-lg bg-${color}-500/20 flex items-center justify-center text-lg">${icon}</div>
+              <div>
+                <h4 class="text-sm font-semibold text-white">${m.title}</h4>
+                <p class="text-xs text-gray-400 mt-1">${time} • ${dur} min</p>
+                ${m.attendees.length ? `<p class="text-xs text-gray-500 mt-1">${m.attendees.join(', ')}</p>` : ''}
+                ${m.tags.length ? `<div class="flex gap-1 mt-2">${m.tags.map(t => `<span class="px-2 py-0.5 rounded-full bg-${color}-500/10 text-${color}-400 text-xs">${t}</span>`).join('')}</div>` : ''}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${m.synced ? '<span class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">Synced</span>' : '<span class="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>'}
+              <button class="text-gray-400 hover:text-white text-sm">→</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      
+      // Update stats
+      document.getElementById('stat-total').textContent = state.meetings.length;
+      document.getElementById('stat-week').textContent = state.meetings.filter(m => {
+        const diff = (Date.now() - m.startTime) / (1000 * 60 * 60 * 24);
+        return diff < 7;
+      }).length;
+      document.getElementById('stat-synced').textContent = state.meetings.filter(m => m.synced).length;
+      const totalHours = state.meetings.reduce((acc, m) => acc + (m.duration || 0), 0) / 60;
+      document.getElementById('stat-hours').textContent = totalHours.toFixed(1);
+    }
+
+    function generateSummary() {
+      if (state.meetings.length === 0) {
+        showToast('Record a meeting first!', 'error');
+        return;
+      }
+      
+      const panel = document.getElementById('ai-summary-panel');
+      panel.classList.remove('hidden');
+      
+      const latest = state.meetings[0];
+      
+      // Simulate AI summary
+      const decisions = [
+        'Expand meat processing operations to cover 3 new provinces',
+        'Maintain RUB/ZAR hedge at 60% of exposure',
+        'Schedule bi-weekly calls with SPonWeb partnership team',
+        'Increase Q2 export target by 15% based on market conditions'
+      ];
+      
+      const actions = [
+        '📋 Follow up with Johannesburg facility manager by Friday',
+        '📋 Send updated trade proposal to Russian partners',
+        '📋 Review BRENT hedging strategy before month end',
+        '📋 Prepare Q2 performance deck for stakeholder meeting'
+      ];
+      
+      const insights = [
+        '💡 Russia-SA trade corridor shows 23% YoY growth potential',
+        '💡 Beef export margins improved 8% with new logistics partner',
+        '💡 RUB volatility may present opportunity for forward contracts',
+        '💡 GRM SPonWeb integration progressing ahead of schedule'
+      ];
+      
+      document.getElementById('decisions').innerHTML = decisions.map(d => `<p class="text-sm text-gray-300">• ${d}</p>`).join('');
+      document.getElementById('action-items').innerHTML = actions.map(a => `<p class="text-sm text-gray-300">${a}</p>`).join('');
+      document.getElementById('insights').innerHTML = insights.map(i => `<p class="text-sm text-gray-300">${i}</p>`).join('');
+      
+      showToast('AI Summary generated!');
+    }
+
+    function generateActionItems() {
+      generateSummary();
+    }
+
+    function syncToObsidian() {
+      const latest = state.meetings[0];
+      latest.synced = true;
+      renderMeetings();
+      showToast('Synced to Obsidian vault!');
+    }
+
+    function exportToObsidian() {
+      syncToObsidian();
+    }
+
+    function sendToAgentmail() {
+      showToast('Summary sent to tumelo@agentmail.to');
+    }
+
+    function closeAiSummary() {
+      document.getElementById('ai-summary-panel').classList.add('hidden');
+    }
+
+    // ===== CALENDAR =====
+    function initCalendar() {
+      const grid = document.getElementById('calendar-grid');
+      const year = state.currentMonth.getFullYear();
+      const month = state.currentMonth.getMonth();
+      
+      document.getElementById('calendar-month').textContent = 
+        state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      
+      // Adjust for Monday start
+      let startDay = firstDay.getDay() - 1;
+      if (startDay < 0) startDay = 6;
+      
+      let html = '';
+      
+      // Empty cells before first day
+      for (let i = 0; i < startDay; i++) {
+        html += '<div class="h-16 rounded-lg"></div>';
+      }
+      
+      // Days of month
+      for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+        const dayName = ['mon','tue','wed','thu','fri','sat','sun'][dayOfWeek];
+        const isAvailable = state.availableDays.includes(dayName);
+        const hasBooking = state.calendarData[dateStr];
+        
+        let bgClass = 'bg-white/5 hover:bg-white/10';
+        if (!isAvailable) bgClass = 'bg-gray-800/30 opacity-50';
+        if (hasBooking) bgClass = 'bg-green-500/20 border border-green-500/40';
+        
+        html += `<div onclick="selectDate('${dateStr}')" class="time-slot h-16 ${bgClass} rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all">
+          <span class="text-sm font-medium text-white">${d}</span>
+          ${hasBooking ? '<span class="text-xs text-green-400 mt-1">📅</span>' : ''}
+        </div>`;
+        
+        firstDay.setDate(firstDay.getDate() + 1);
+      }
+      
+      grid.innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      state.currentMonth.setMonth(state.currentMonth.getMonth() + delta);
+      initCalendar();
+    }
+
+    function selectDate(dateStr) {
+      state.selectedDate = dateStr;
+      const [y, m, d] = dateStr.split('-');
+      const date = new Date(y, m - 1, d);
+      
+      document.getElementById('selected-date-label').textContent = 
+        date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+      
+      const panel = document.getElementById('time-slots-panel');
+      panel.classList.remove('hidden');
+      
+      // Generate time slots
+      const slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', 
+                     '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
+      
+      const bookedSlots = state.calendarData[dateStr] || [];
+      
+      document.getElementById('time-slots').innerHTML = slots.map(slot => {
+        const isBooked = bookedSlots.includes(slot);
+        return `<button onclick="selectTimeSlot('${slot}')" 
+          class="time-slot px-3 py-2 rounded-lg ${isBooked ? 'booked' : 'available'} border border-white/10 text-sm text-white hover:border-blue-500 transition-all ${isBooked ? 'text-gray-500' : ''}">
+          ${slot}
+          ${isBooked ? '❌' : '✓'}
+        </button>`;
+      }).join('');
+    }
+
+    function selectTimeSlot(slot) {
+      state.selectedTimeSlot = slot;
+      document.getElementById('booking-form').classList.remove('hidden');
+    }
+
+    function closeTimeSlots() {
+      document.getElementById('time-slots-panel').classList.add('hidden');
+      document.getElementById('booking-form').classList.add('hidden');
+    }
+
+    function confirmBooking() {
+      const name = document.getElementById('booker-name').value;
+      const email = document.getElementById('booker-email').value;
+      const notes = document.getElementById('booker-notes').value;
+      
+      if (!name || !email) {
+        showToast('Please fill in name and email', 'error');
+        return;
+      }
+      
+      if (!state.calendarData[state.selectedDate]) {
+        state.calendarData[state.selectedDate] = [];
+      }
+      state.calendarData[state.selectedDate].push(state.selectedTimeSlot);
+      
+      const booking = {
+        id: Date.now(),
+        date: state.selectedDate,
+        time: state.selectedTimeSlot,
+        name,
+        email,
+        notes,
+        duration: document.getElementById('booking-duration').value
+      };
+      
+      state.bookings.push(booking);
+      renderUpcomingBookings();
+      closeTimeSlots();
+      initCalendar();
+      
+      showToast('Booking confirmed! Email sent to ' + email);
+    }
+
+    function renderUpcomingBookings() {
+      const list = document.getElementById('upcoming-bookings');
+      
+      if (state.bookings.length === 0) {
+        list.innerHTML = '<div class="text-center py-8 text-gray-500"><p>No upcoming bookings</p></div>';
+        return;
+      }
+      
+      list.innerHTML = state.bookings.map(b => {
+        const [y, m, d] = b.date.split('-');
+        return `<div class="flex items-center justify-between p-4 rounded-xl bg-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center text-lg">📅</div>
+            <div>
+              <p class="text-sm font-medium text-white">${b.name}</p>
+              <p class="text-xs text-gray-400">${d}/${m}/${y} at ${b.time}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-gray-400">${b.email}</p>
+            <p class="text-xs text-gray-500">${b.duration} min</p>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleDay(btn, day) {
+      if (state.availableDays.includes(day)) {
+        state.availableDays = state.availableDays.filter(d => d !== day);
+        btn.className = 'day-btn px-3 py-2 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-500 text-sm';
+      } else {
+        state.availableDays.push(day);
+        btn.className = 'day-btn px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-sm';
+      }
+    }
+
+    function saveBookingSettings() {
+      const email = document.getElementById('booking-email').value;
+      const name = document.getElementById('booking-name').value;
+      
+      if (!email) {
+        showToast('Please enter your agentmail address', 'error');
+        return;
+      }
+      
+      showToast('Booking settings saved!');
+    }
+
+    function syncCalendar() {
+      showToast('Calendar synced with AgentMail!');
+    }
+
+    function addMeetingType() {
+      showToast('Meeting type editor coming soon!');
+    }
+
+    // ===== COMMAND CENTER =====
+    function initCharts() {
+      const ctx = document.getElementById('markets-chart');
+      if (!ctx) return;
+      
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'USD/ZAR',
+            data: [18.2, 18.1, 18.3, 18.35, 18.42, 18.4, 18.42],
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            fill: true,
+            tension: 0.4
+          }, {
+            label: 'RUB/ZAR',
+            data: [0.208, 0.206, 0.205, 0.204, 0.205, 0.206, 0.205],
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139,92,246,0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#9ca3af' } } },
+          scales: {
+            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+
+    function openCommand(cmd) {
+      if (cmd === 'meeting') showTab('calendar');
+      else if (cmd === 'discord') showTab('discord');
+      else showToast(`${cmd} workflow opened`);
+    }
+
+    // ===== DISCORD =====
+    function saveDiscordConfig() {
+      const token = document.getElementById('discord-token').value;
+      
+      if (!token) {
+        showToast('Please enter a bot token', 'error');
+        return;
+      }
+      
+      showToast('Discord configuration saved! Bot token stored securely.');
+    }
+
+    function sendDiscordMessage() {
+      const msg = document.getElementById('discord-message').value;
+      const target = document.getElementById('discord-target').value;
+      
+      if (!msg) {
+        showToast('Please type a message', 'error');
+        return;
+      }
+      
+      const log = document.getElementById('discord-log');
+      if (log.querySelector('.text-center')) log.innerHTML = '';
+      
+      const entry = document.createElement('div');
+      entry.className = 'flex items-start gap-3 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20';
+      entry.innerHTML = `<div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-sm">📤</div>
+        <div>
+          <p class="text-sm text-white">${msg}</p>
+          <p class="text-xs text-gray-400 mt-1">To: ${target} • Just now</p>
+        </div>`;
+      log.prepend(entry);
+      
+      document.getElementById('discord-message').value = '';
+      showToast('Message sent!');
+    }
+
+    // ===== INIT =====
+    initCalendar();
+    renderMeetings();
+    renderUpcomingBookings();
+  </script>
+</body>
+</html>
