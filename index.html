@@ -204,6 +204,9 @@
             <button onclick="switchTab('intel')" id="tab-intel" class="tab-btn px-4 py-2 bg-gray-900/80 rounded-t-lg border border-yellow-600/30 border-b-0 hover:bg-gray-800 transition">
                 <span class="text-gray-300">🎖️ Smasher Intel</span>
             </button>
+            <button onclick="switchTab('discord')" id="tab-discord" class="tab-btn px-4 py-2 bg-gray-900/80 rounded-t-lg border border-yellow-600/30 border-b-0 hover:bg-gray-800 transition">
+                <span class="text-gray-300">💬 Discord</span>
+            </button>
         </div>
 
         <!-- Tab Content -->
@@ -590,6 +593,194 @@ python3 chiefs_voice_system.py --speak adam "Report on Uvelka deal"
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- DISCORD TAB -->
+            <div id="panel-discord" class="tab-panel hidden">
+                <div class="grid lg:grid-cols-3 gap-6">
+                    
+                    <!-- Discord Connection Status -->
+                    <div class="panel">
+                        <div class="panel-header px-4 py-3 rounded-t-lg">
+                            <div class="font-orbitron gold-text text-lg flex items-center gap-2">
+                                <span class="text-xl">💬</span> DISCORD HUB
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-black/30 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div id="discord-status-dot" class="w-3 h-3 rounded-full bg-red-500 status-live"></div>
+                                    <div>
+                                        <div class="font-semibold">ADAM SMASHER</div>
+                                        <div class="text-sm text-gray-400" id="discord-status-text">Disconnected</div>
+                                    </div>
+                                </div>
+                                <button onclick="checkDiscordConnection()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-sm">
+                                    Check
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-black/30 p-3 rounded-lg text-center">
+                                    <div class="text-2xl font-orbitron text-indigo-400" id="discord-messages">0</div>
+                                    <div class="text-xs text-gray-500">Messages</div>
+                                </div>
+                                <div class="bg-black/30 p-3 rounded-lg text-center">
+                                    <div class="text-2xl font-orbitron text-indigo-400" id="discord-alerts">4</div>
+                                    <div class="text-xs text-gray-500">Active Alerts</div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-xs text-gray-500">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    Market Monitor: Active
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    Webhook Server: Listening
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Message -->
+                    <div class="panel">
+                        <div class="panel-header px-4 py-3 rounded-t-lg">
+                            <div class="font-orbitron gold-text text-lg flex items-center gap-2">
+                                <span class="text-xl">📤</span> QUICK SEND
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Channel</label>
+                                <select id="discord-channel" class="input-dark w-full px-3 py-2 rounded">
+                                    <option value="">Select Channel...</option>
+                                    <option value="general"># general</option>
+                                    <option value="alerts"># alerts</option>
+                                    <option value="trades"># trades</option>
+                                    <option value="meetings"># meetings</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Message</label>
+                                <textarea id="discord-message" class="input-dark w-full px-3 py-2 rounded h-32" placeholder="Type your message... (use @ADAM for commands)"></textarea>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="sendDiscordMessage()" class="btn-primary px-4 py-2 rounded flex-1 flex items-center justify-center gap-2">
+                                    <span>📤</span> Send
+                                </button>
+                                <button onclick="openDiscordPanel()" class="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 transition">
+                                    <span>↗️</span> Full Panel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Discord Messages -->
+                    <div class="panel">
+                        <div class="panel-header px-4 py-3 rounded-t-lg">
+                            <div class="font-orbitron gold-text text-lg flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">📨</span> RECENT MESSAGES
+                                </div>
+                                <button onclick="refreshDiscordMessages()" class="text-xs text-indigo-400 hover:text-indigo-300">↻ Refresh</button>
+                            </div>
+                        </div>
+                        <div class="p-4 max-h-[400px] overflow-y-auto scrollbar-thin" id="discord-messages-list">
+                            <div class="text-center py-8 text-gray-500">
+                                <div class="text-4xl mb-2">📭</div>
+                                <div>No messages yet</div>
+                                <div class="text-xs mt-1">Messages will appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- Command Reference & Alert Config -->
+                <div class="grid lg:grid-cols-2 gap-6 mt-6">
+                    
+                    <!-- Command Reference -->
+                    <div class="panel">
+                        <div class="panel-header px-4 py-3 rounded-t-lg">
+                            <div class="font-orbitron gold-text text-lg flex items-center gap-2">
+                                <span class="text-xl">📋</span> COMMAND REFERENCE
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM help</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Commands</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM status</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Systems</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM markets</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Prices</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM trade BUY...</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Log Trade</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM meeting...</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Schedule</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM alert USDZAR > 18.50</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Set Alert</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM dm @User msg</code>
+                                    <span class="text-gray-500 text-xs ml-auto">Send DM</span>
+                                </div>
+                                <div class="flex items-center gap-2 p-2 bg-black/30 rounded">
+                                    <code class="text-indigo-400 text-xs">@ADAM sync</code>
+                                    <span class="text-gray-500 text-xs ml-auto">GitHub Sync</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alert Configuration -->
+                    <div class="panel">
+                        <div class="panel-header px-4 py-3 rounded-t-lg">
+                            <div class="font-orbitron gold-text text-lg flex items-center gap-2">
+                                <span class="text-xl">🔔</span> ALERT CONFIGURATION
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+                                <div>
+                                    <div class="font-semibold text-indigo-400">USD/ZAR</div>
+                                    <div class="text-xs text-gray-500">Alert when above threshold</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="discord-alert-usdzar" value="18.50" step="0.01" class="input-dark w-20 px-2 py-1 rounded text-center text-sm">
+                                    <div class="alert-toggle active" id="toggle-usdzar"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+                                <div>
+                                    <div class="font-semibold text-indigo-400">RUB/ZAR</div>
+                                    <div class="text-xs text-gray-500">Alert on significant move</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="discord-alert-rubzar" value="1.0" step="0.1" class="input-dark w-20 px-2 py-1 rounded text-center text-sm">
+                                    <div class="alert-toggle active" id="toggle-rubzar"></div>
+                                </div>
+                            </div>
+                            <button onclick="saveDiscordAlerts()" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded transition text-sm">
+                                💾 Save Alert Configuration
+                            </button>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
             
@@ -1000,6 +1191,134 @@ The meeting covered key strategic initiatives for the Russia-Africa trade corrid
         function openVaultFolder(folder) {
             showToast('📁', `Opening ${folder}...`);
         }
+        
+        // ============================================
+        // DISCORD HUB FUNCTIONS
+        // ============================================
+        
+        let discordMessages = [];
+        let discordWebhookUrl = 'http://localhost:5000';
+        
+        function checkDiscordConnection() {
+            const statusDot = document.getElementById('discord-status-dot');
+            const statusText = document.getElementById('discord-status-text');
+            
+            // Try to connect to webhook server
+            fetch(`${discordWebhookUrl}/status`)
+                .then(res => {
+                    if (res.ok) {
+                        statusDot.classList.remove('bg-red-500');
+                        statusDot.classList.add('bg-green-500');
+                        statusText.textContent = 'Connected';
+                        showToast('✅', 'Discord Hub connected!');
+                    } else {
+                        throw new Error('Not connected');
+                    }
+                })
+                .catch(() => {
+                    statusDot.classList.remove('bg-green-500');
+                    statusDot.classList.add('bg-red-500');
+                    statusText.textContent = 'Disconnected';
+                    showToast('⚠️', 'Could not connect to Discord Hub');
+                });
+        }
+        
+        function sendDiscordMessage() {
+            const channel = document.getElementById('discord-channel').value;
+            const message = document.getElementById('discord-message').value.trim();
+            
+            if (!message) {
+                showToast('⚠️', 'Please enter a message');
+                return;
+            }
+            
+            // For now, show confirmation - actual sending requires bot
+            const prefix = channel ? `@ADAM ` : '@ADAM ';
+            showToast('📤', `Message prepared: ${prefix}${message}`);
+            
+            // Clear input
+            document.getElementById('discord-message').value = '';
+        }
+        
+        function refreshDiscordMessages() {
+            const container = document.getElementById('discord-messages-list');
+            
+            fetch(`${discordWebhookUrl}/messages/recent`)
+                .then(res => res.ok ? res.json() : [])
+                .then(messages => {
+                    discordMessages = messages;
+                    document.getElementById('discord-messages').textContent = messages.length;
+                    
+                    if (messages.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center py-8 text-gray-500">
+                                <div class="text-4xl mb-2">📭</div>
+                                <div>No messages yet</div>
+                                <div class="text-xs mt-1">Messages will appear here</div>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    container.innerHTML = messages.slice(-10).reverse().map(msg => `
+                        <div class="p-3 bg-black/30 rounded-lg mb-2 border-l-2 border-indigo-500">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-indigo-400 text-sm font-semibold">${msg.author?.username || msg.user?.username || 'Discord'}</span>
+                                <span class="text-xs text-gray-500">${new Date(msg.timestamp || msg.received_at).toLocaleTimeString()}</span>
+                            </div>
+                            <div class="text-sm text-gray-300">${escapeHtml(msg.content || msg.event_type || '')}</div>
+                        </div>
+                    `).join('');
+                })
+                .catch(() => {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <div class="text-4xl mb-2">⚠️</div>
+                            <div>Could not load messages</div>
+                            <div class="text-xs mt-1">Check webhook server</div>
+                        </div>
+                    `;
+                });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function openDiscordPanel() {
+            window.open('discord-panel.html', 'DiscordPanel', 'width=1400,height=900');
+        }
+        
+        function saveDiscordAlerts() {
+            const alerts = {
+                USDZAR: {
+                    enabled: document.getElementById('toggle-usdzar').classList.contains('active'),
+                    threshold: parseFloat(document.getElementById('discord-alert-usdzar').value)
+                },
+                RUBZAR: {
+                    enabled: document.getElementById('toggle-rubzar').classList.contains('active'),
+                    threshold: parseFloat(document.getElementById('discord-alert-rubzar').value)
+                }
+            };
+            
+            localStorage.setItem('adam-discord-alerts', JSON.stringify(alerts));
+            showToast('💾', 'Alert configuration saved!');
+        }
+        
+        // Toggle alert
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('alert-toggle')) {
+                e.target.classList.toggle('active');
+            }
+        });
+        
+        // Initialize Discord on load
+        setTimeout(() => {
+            checkDiscordConnection();
+            refreshDiscordMessages();
+        }, 1000);
     </script>
 </body>
 </html>
