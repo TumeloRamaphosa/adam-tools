@@ -1,0 +1,50 @@
+{
+  "vault_name": "ADAM Smasher Vault",
+  "created": "2026-06-12",
+  "version": "2.0",
+  "description": "ADAM SMASHER Global Markets Operating System - Obsidian Vault",
+  "folders": [
+    {
+      "name": "01 - Meetings",
+      "description": "Meeting records and transcripts",
+      "template": "meeting-template.md"
+    },
+    {
+      "name": "02 - Trade Ideas",
+      "description": "Trade opportunities and deal tracking"
+    },
+    {
+      "name": "03 - Research",
+      "description": "Market research and analysis"
+    },
+    {
+      "name": "04 - Market Intel",
+      "description": "Intelligence reports and market data"
+    },
+    {
+      "name": "05 - Agent Conversations",
+      "description": "AI agent dialogue logs"
+    },
+    {
+      "name": "06 - Daily Reports",
+      "description": "Daily operational summaries",
+      "template": "daily-template.md"
+    },
+    {
+      "name": "07 - Meat Business",
+      "description": "Meat trading operations"
+    },
+    {
+      "name": "08 - Smasher Intel",
+      "description": "Warlord intelligence and profile"
+    }
+  ],
+  "plugins": [
+    "calendar",
+    "dataview",
+    "templater",
+    "obsidian-git"
+  ],
+  "daily_template": "daily-template.md",
+  "created_by": "ADAM SMASHER OS v2.0"
+}
